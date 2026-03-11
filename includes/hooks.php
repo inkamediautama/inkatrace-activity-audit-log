@@ -202,7 +202,6 @@ function waal_t($text) {
         'Theme Color' => 'Warna Tema',
         'Choose one primary color and the plugin will generate matching button and CTA gradients automatically.' => 'Pilih satu warna utama dan plugin akan membuat gradient tombol dan CTA yang serasi secara otomatis.',
         'Primary Theme Color' => 'Warna Tema Utama',
-        'HEX Color Code' => 'Kode Warna HEX',
         'Buttons, active tabs, CTA accents, and focus highlights will adapt automatically from this color.' => 'Tombol, tab aktif, aksen CTA, dan highlight fokus akan menyesuaikan otomatis dari warna ini.',
         'Export Branding' => 'Branding Ekspor',
         'Add company logo, company name, and address headers to export files with Pro.' => 'Tambahkan logo perusahaan, nama perusahaan, dan header alamat ke file ekspor dengan Pro.',
@@ -301,13 +300,31 @@ function waal_t($text) {
         'Archive logs locally before purge and restore archived data when needed.' => 'Arsipkan log secara lokal sebelum purge dan pulihkan data arsip saat dibutuhkan.',
         'Enable local archive before purge' => 'Aktifkan arsip lokal sebelum purge',
         'Available in Pro with archive metadata history and one-click restore.' => 'Tersedia di Pro dengan riwayat metadata arsip dan restore sekali klik.',
-        'Email Notifications (Pro)' => 'Notifikasi Email (Pro)',
+        'Email Notifications' => 'Notifikasi Email',
         'Need Help?' => 'Butuh Bantuan?',
         'Send a bug report, feature request, or feedback directly from this page.' => 'Kirim laporan bug, permintaan fitur, atau masukan langsung dari halaman ini.',
         'Open Report Form' => 'Buka Form Laporan',
         'Option' => 'Opsi',
         'Detail' => 'Detail',
         'Log Detail' => 'Detail Log',
+        'Related Resource' => 'Resource Terkait',
+        'No related resource available for this log.' => 'Tidak ada resource terkait yang tersedia untuk log ini.',
+        'Edit Resource' => 'Edit Resource',
+        'View Resource' => 'Lihat Resource',
+        'Open File' => 'Buka File',
+        'Edit User' => 'Edit Pengguna',
+        'Edit Comment' => 'Edit Komentar',
+        'Open Plugins' => 'Buka Plugins',
+        'Open Themes' => 'Buka Themes',
+        'IP Display & Exposure' => 'Tampilan & Eksposur IP',
+        'IP Display Mode' => 'Mode Tampilan IP',
+        'Full' => 'Penuh',
+        'Masked' => 'Disamarkan',
+        'Role-based' => 'Berdasarkan Role',
+        'Choose how IP addresses appear in the admin UI. Exports and audit JSON remain full for investigation needs.' => 'Pilih bagaimana alamat IP ditampilkan di UI admin. Ekspor dan JSON audit tetap penuh untuk kebutuhan investigasi.',
+        'Choose how IP addresses appear in the admin UI. Exports, webhooks, and audit JSON remain full for investigation needs.' => 'Pilih bagaimana alamat IP ditampilkan di UI admin. Ekspor, webhook, dan JSON audit tetap penuh untuk kebutuhan investigasi.',
+        'IP display mode can only be changed by an administrator.' => 'Mode tampilan IP hanya bisa diubah oleh administrator.',
+        'Full shows the exact IP. Masked shows partial IP only. Role-based shows full IP for administrators and masked IP for other roles.' => 'Penuh menampilkan IP lengkap. Disamarkan hanya menampilkan sebagian IP. Berdasarkan role menampilkan IP penuh untuk administrator dan IP tersamar untuk role lain.',
         'Close' => 'Tutup',
         'Save Settings' => 'Simpan Pengaturan',
         'Compliance Reports' => 'Laporan Kepatuhan',
@@ -574,13 +591,141 @@ function waal_get_event_label($object_type, $action = '') {
     return waal_t('System');
 }
 
+function waal_ip_display_mode() {
+    $mode = sanitize_key((string) get_option('waal_ip_display_mode', 'full'));
+    return in_array($mode, ['full', 'masked', 'role_based'], true) ? $mode : 'full';
+}
+
+function waal_user_can_view_full_ip() {
+    $mode = waal_ip_display_mode();
+    if ($mode === 'full') {
+        return true;
+    }
+    if ($mode === 'masked') {
+        return false;
+    }
+
+    if (function_exists('waal_user_can_manage_audit_integrity')) {
+        return waal_user_can_manage_audit_integrity();
+    }
+
+    return current_user_can('manage_options');
+}
+
+function waal_apply_ip_mask($ip_address) {
+    $ip_address = trim((string) $ip_address);
+    if ($ip_address === '') {
+        return '-';
+    }
+
+    $normalized = preg_replace('/[^0-9a-fA-F:\.]/', '', $ip_address);
+    if (!is_string($normalized) || $normalized === '') {
+        return '-';
+    }
+
+    if (filter_var($normalized, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        $parts = explode('.', $normalized);
+        if (count($parts) === 4) {
+            return $parts[0] . '.xxx.xxx.xxx';
+        }
+        return $normalized;
+    }
+
+    if (filter_var($normalized, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+        $parts = explode(':', $normalized);
+        if (count($parts) >= 2) {
+            $visible = array_slice($parts, 0, 2);
+            return implode(':', $visible) . ':xxxx:xxxx:xxxx:xxxx';
+        }
+        return $normalized;
+    }
+
+    return $normalized;
+}
+
 function waal_mask_ip_address($ip_address) {
     $ip_address = trim((string) $ip_address);
     if ($ip_address === '') {
         return '-';
     }
-    $ip_address = preg_replace('/[^0-9a-fA-F:\.]/', '', $ip_address);
-    return $ip_address !== '' ? $ip_address : '-';
+    if (waal_user_can_view_full_ip()) {
+        $ip_address = preg_replace('/[^0-9a-fA-F:\.]/', '', $ip_address);
+        return $ip_address !== '' ? $ip_address : '-';
+    }
+    return waal_apply_ip_mask($ip_address);
+}
+
+function waal_ip_detail_value($ip_address) {
+    $ip_address = trim((string) $ip_address);
+    if ($ip_address === '') {
+        return '';
+    }
+
+    return waal_user_can_view_full_ip() ? $ip_address : waal_apply_ip_mask($ip_address);
+}
+
+function waal_normalize_ip_candidate($value) {
+    $value = trim((string) $value);
+    if ($value === '') {
+        return '';
+    }
+
+    if (strpos($value, ',') !== false) {
+        $parts = array_map('trim', explode(',', $value));
+        $value = (string) ($parts[0] ?? '');
+    }
+
+    if ($value === '') {
+        return '';
+    }
+
+    if (strpos($value, ':') !== false && strpos($value, '.') !== false) {
+        if (preg_match('/^\[?([0-9a-fA-F:\.]+)\]?:(\d+)$/', $value, $matches)) {
+            $value = (string) ($matches[1] ?? $value);
+        }
+    }
+
+    $value = trim($value, "[] \t\n\r\0\x0B");
+    return filter_var($value, FILTER_VALIDATE_IP) ? $value : '';
+}
+
+function waal_get_request_ip_address() {
+    $server = isset($_SERVER) && is_array($_SERVER) ? $_SERVER : [];
+    $header_priority = [
+        'HTTP_CF_CONNECTING_IP',
+        'HTTP_TRUE_CLIENT_IP',
+        'HTTP_X_REAL_IP',
+        'HTTP_X_FORWARDED_FOR',
+        'HTTP_X_CLIENT_IP',
+        'HTTP_X_CLUSTER_CLIENT_IP',
+        'HTTP_FORWARDED_FOR',
+        'HTTP_FORWARDED',
+        'REMOTE_ADDR',
+    ];
+
+    foreach ($header_priority as $server_key) {
+        if (!isset($server[$server_key])) {
+            continue;
+        }
+
+        $raw_value = wp_unslash($server[$server_key]);
+        if ($server_key === 'HTTP_FORWARDED') {
+            if (preg_match('/for=(?:"?\[?)([0-9a-fA-F:\.]+)(?:\]?")?/i', (string) $raw_value, $matches)) {
+                $candidate = waal_normalize_ip_candidate((string) ($matches[1] ?? ''));
+                if ($candidate !== '') {
+                    return $candidate;
+                }
+            }
+            continue;
+        }
+
+        $candidate = waal_normalize_ip_candidate((string) $raw_value);
+        if ($candidate !== '') {
+            return $candidate;
+        }
+    }
+
+    return '';
 }
 
 function waal_get_object_type_label($object_type) {
@@ -1150,7 +1295,7 @@ function waal_free_maybe_send_threat_alert($user_id, $action, $title, $log_id = 
     }
     set_transient($cache_key, 1, 10 * MINUTE_IN_SECONDS);
 
-    $ip = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''));
+    $ip = function_exists('waal_get_request_ip_address') ? waal_get_request_ip_address() : sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''));
     $site = home_url('/');
     $event_id = max(0, (int) $log_id);
     $detail_url = admin_url('admin.php?page=wp-activity-log');
@@ -1249,7 +1394,7 @@ function waal_free_maybe_send_critical_change_alert($user_id, $action, $title, $
     $event_label = function_exists('waal_get_action_label')
         ? waal_get_action_label($action)
         : ucwords(str_replace('_', ' ', $action));
-    $ip = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''));
+    $ip = function_exists('waal_get_request_ip_address') ? waal_get_request_ip_address() : sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''));
     $event_id = max(0, (int) $log_id);
     $detail_url = admin_url('admin.php?page=wp-activity-log');
     if ($event_id > 0) {
@@ -1304,7 +1449,7 @@ function waal_log($user_id, $action, $object_type = '', $object_id = 0, $title =
     $object_type = sanitize_key($object_type);
     $object_id = (int) $object_id;
     $title = wp_strip_all_tags($title);
-    $ip_address = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''));
+    $ip_address = function_exists('waal_get_request_ip_address') ? waal_get_request_ip_address() : sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''));
     $user_agent = sanitize_textarea_field(wp_unslash($_SERVER['HTTP_USER_AGENT'] ?? ''));
 
 
@@ -1360,13 +1505,13 @@ add_action('wp_login', function($login, $user){
     } else {
         $username = sanitize_text_field((string) $login);
     }
-    $ip_address = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''));
+    $ip_address = function_exists('waal_get_request_ip_address') ? waal_get_request_ip_address() : sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''));
     waal_reset_failed_login_attempts($username, $ip_address);
-    waal_log($user->ID, 'login');
+    waal_log($user->ID, 'login', 'auth');
 }, 10, 2);
 add_action('wp_login_failed', function($username){
     $username = sanitize_text_field((string) $username);
-    $ip_address = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''));
+    $ip_address = function_exists('waal_get_request_ip_address') ? waal_get_request_ip_address() : sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''));
     $attempt_count = waal_increment_failed_login_attempts($username, $ip_address);
     if (waal_should_log_failed_login($username, $ip_address)) {
         waal_log(0, 'login_failed', 'auth', 0, $username);
@@ -1378,7 +1523,7 @@ add_action('wp_login_failed', function($username){
 add_action('clear_auth_cookie', function(){
     $user_id = get_current_user_id();
     if ($user_id) {
-        waal_log($user_id, 'logout');
+        waal_log($user_id, 'logout', 'auth');
     }
 });
 

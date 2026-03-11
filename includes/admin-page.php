@@ -151,19 +151,6 @@ function waal_hex_to_rgb_string($hex) {
     return implode(',', [hexdec(substr($hex, 0, 2)), hexdec(substr($hex, 2, 2)), hexdec(substr($hex, 4, 2))]);
 }
 
-function waal_get_theme_css() {
-    $accent_2 = function_exists('waal_get_theme_color') ? waal_get_theme_color() : '#2C6652';
-    $accent_1 = waal_adjust_hex_color($accent_2, -18);
-    $accent_3 = waal_adjust_hex_color($accent_2, 12);
-    $accent_rgb = waal_hex_to_rgb_string($accent_2);
-    return '.waal-admin-wrap{--waal-accent-1:' . $accent_1 . ';--waal-accent-2:' . $accent_2 . ';--waal-accent-3:' . $accent_3 . ';}'
-        . '.waal-admin-wrap input:focus,.waal-admin-wrap select:focus,.waal-admin-wrap textarea:focus{border-color:' . $accent_2 . ';box-shadow:0 0 0 1px ' . $accent_2 . ';}'
-        . '.waal-admin-wrap .nav-tab-active{border-color:' . $accent_2 . ';background:linear-gradient(135deg,' . $accent_1 . ',' . $accent_2 . ');}'
-        . '.waal-admin-wrap .button-primary{border-color:' . $accent_2 . ';box-shadow:0 7px 18px rgba(' . $accent_rgb . ',.24);}'
-        . '.waal-premium-cta{border-color:' . $accent_2 . ';background:linear-gradient(135deg,' . $accent_1 . ' 0%,' . $accent_2 . ' 55%,' . $accent_3 . ' 100%);box-shadow:0 10px 24px rgba(' . $accent_rgb . ',.28);}'
-        . '.waal-upgrade-premium-btn.button{border-color:' . $accent_2 . ';background:linear-gradient(135deg,' . $accent_1 . ' 0%,' . $accent_2 . ' 55%,' . $accent_3 . ' 100%);box-shadow:0 8px 20px rgba(' . $accent_rgb . ',.24);}';
-}
-
 function waal_enqueue_admin_styles($hook_suffix = '') {
     $page_raw = (string) filter_input(INPUT_GET, 'page', FILTER_UNSAFE_RAW);
     $page = sanitize_key($page_raw);
@@ -177,7 +164,6 @@ function waal_enqueue_admin_styles($hook_suffix = '') {
     $style_file = WAAL_PATH . 'includes/style.css';
     $version = file_exists($style_file) ? (string) filemtime($style_file) : '1.0.0';
     wp_enqueue_style('waal-admin-style', WAAL_URL . 'includes/style.css', [], $version);
-    wp_add_inline_style('waal-admin-style', waal_get_theme_css());
     wp_enqueue_script('waal-admin-script', WAAL_URL . 'includes/admin.js', [], $version, true);
     wp_localize_script('waal-admin-script', 'waalAdminI18n', [
         'ipInfoTitle' => waal_t('IP Information'),
@@ -191,6 +177,7 @@ function waal_enqueue_admin_styles($hook_suffix = '') {
         'ipInfoOrg' => waal_t('Organization'),
         'ipInfoTimezone' => waal_t('Timezone'),
         'ipInfoExternalDisabled' => waal_t('External IP geolocation is disabled until you enable it in Settings.'),
+        'detailResourcesEmpty' => waal_t('No related resource available for this log.'),
         'saving' => waal_t('Saving...'),
         'saved' => waal_t('Saved'),
         'saveFailed' => waal_t('Failed to save incident note.'),
@@ -202,6 +189,7 @@ function waal_enqueue_admin_styles($hook_suffix = '') {
         'nonce' => wp_create_nonce('waal_ip_info'),
         'incidentNonce' => wp_create_nonce('waal_save_incident_note'),
         'geoLookupEnabled' => waal_ip_geo_lookup_enabled() ? 1 : 0,
+        'themeColor' => function_exists('waal_get_theme_color') ? waal_get_theme_color() : '#2C6652',
     ]);
 }
 
@@ -409,29 +397,85 @@ function waal_render_language_switcher($page_slug = 'wp-activity-log') {
         'per_page',
         'paged',
         'tab',
+        'range',
+    ];
+    $compact_labels = [
+        'en_US' => 'EN',
+        'id_ID' => 'ID',
     ];
     ?>
-    <form method="get" class="waal-lang-switcher">
-        <input type="hidden" name="page" value="<?php echo esc_attr($page_slug); ?>">
-        <input type="hidden" name="waal_lang_nonce" value="<?php echo esc_attr($nonce); ?>">
-        <?php foreach ($preserve_keys as $key): ?>
+    <div class="waal-lang-switcher" aria-label="<?php echo esc_attr(function_exists('waal_t') ? waal_t('Language') : 'Language'); ?>">
+        <?php foreach ($supported as $lang_code => $lang_label): ?>
             <?php
-            $preserved_value = filter_input(INPUT_GET, $key, FILTER_UNSAFE_RAW);
-            if ($preserved_value === null) {
-                continue;
+            $switch_url_args = [
+                'page' => $page_slug,
+                'waal_lang' => (string) $lang_code,
+                'waal_lang_nonce' => $nonce,
+            ];
+            foreach ($preserve_keys as $key) {
+                $preserved_value = filter_input(INPUT_GET, $key, FILTER_UNSAFE_RAW);
+                if ($preserved_value === null) {
+                    continue;
+                }
+                $switch_url_args[$key] = sanitize_text_field((string) $preserved_value);
             }
+            $switch_url = add_query_arg($switch_url_args, admin_url('admin.php'));
+            $is_active = $current === (string) $lang_code;
             ?>
-            <input type="hidden" name="<?php echo esc_attr($key); ?>" value="<?php echo esc_attr(sanitize_text_field((string) $preserved_value)); ?>">
+            <a href="<?php echo esc_url($switch_url); ?>" class="waal-lang-switcher-link <?php echo $is_active ? 'is-active' : ''; ?>" aria-current="<?php echo $is_active ? 'true' : 'false'; ?>" title="<?php echo esc_attr((string) $lang_label); ?>">
+                <?php echo esc_html($compact_labels[$lang_code] ?? strtoupper(substr((string) $lang_code, 0, 2))); ?>
+            </a>
         <?php endforeach; ?>
-        <label for="waal-lang"><?php echo esc_html(function_exists('waal_t') ? waal_t('Language') : 'Language'); ?></label>
-        <select id="waal-lang" name="waal_lang" onchange="this.form.submit()">
-            <?php foreach ($supported as $lang_code => $lang_label): ?>
-                <option value="<?php echo esc_attr((string) $lang_code); ?>" <?php selected($current, (string) $lang_code); ?>>
-                    <?php echo esc_html((string) $lang_label); ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-    </form>
+    </div>
+    <?php
+}
+
+function waal_get_admin_header_pages() {
+    $pages = [];
+    if (function_exists('waal_user_can_view_logs') && waal_user_can_view_logs()) {
+        $pages['wp-activity-log'] = ['label' => waal_t('Activity Log'), 'url' => admin_url('admin.php?page=wp-activity-log')];
+        $pages['wp-activity-log-settings'] = ['label' => waal_t('Settings'), 'url' => admin_url('admin.php?page=wp-activity-log-settings')];
+        $pages['wp-activity-log-insights'] = ['label' => waal_t('Compliance & Timeline'), 'url' => admin_url('admin.php?page=wp-activity-log-insights')];
+        if (function_exists('waal_user_can_manage_logs') && waal_user_can_manage_logs()) {
+            $pages['wp-activity-log-docs'] = ['label' => waal_t('Documentation'), 'url' => admin_url('admin.php?page=wp-activity-log-docs')];
+        }
+        $pages['wp-activity-log-upgrade'] = ['label' => waal_t("What's in Pro?"), 'url' => admin_url('admin.php?page=wp-activity-log-upgrade')];
+    }
+    return $pages;
+}
+
+function waal_render_admin_header($active_page, $page_title = '', $page_desc = '', $language_page_slug = '') {
+    $active_page = sanitize_key((string) $active_page);
+    $language_page_slug = $language_page_slug !== '' ? sanitize_key((string) $language_page_slug) : $active_page;
+    $logo_url = defined('WAAL_URL') ? WAAL_URL . 'includes/inkatrace_logo.png' : '';
+    $pages = waal_get_admin_header_pages();
+    ?>
+    <div class="waal-shell-header">
+        <div class="waal-shell-header-bar">
+            <div class="waal-shell-brand">
+                <?php if ($logo_url !== ''): ?>
+                    <img class="waal-shell-brand-logo" src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr(waal_t('InkaTrace Activity Log')); ?>">
+                <?php endif; ?>
+            </div>
+            <div class="waal-shell-header-meta">
+                <?php if (function_exists('waal_render_language_switcher')) waal_render_language_switcher($language_page_slug); ?>
+                <?php if (defined('WAAL_VERSION') && WAAL_VERSION !== ''): ?>
+                    <span class="waal-shell-version" aria-label="<?php echo esc_attr(waal_t('Version')); ?>">
+                        <?php echo esc_html(WAAL_VERSION); ?>
+                    </span>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php if (!empty($pages)): ?>
+            <nav class="waal-shell-nav" aria-label="<?php echo esc_attr(waal_t('Plugin navigation')); ?>">
+                <?php foreach ($pages as $page_key => $page): ?>
+                    <a href="<?php echo esc_url((string) $page['url']); ?>" class="waal-shell-nav-link <?php echo $page_key === $active_page ? 'is-active' : ''; ?>">
+                        <?php echo esc_html((string) $page['label']); ?>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+        <?php endif; ?>
+    </div>
     <?php
 }
 
@@ -603,6 +647,22 @@ function waal_has_active_filters(array $filters) {
     return !empty($filters['from']) || !empty($filters['to']) || !empty($filters['user']) || !empty($filters['event']) || !empty($filters['action']) || !empty($filters['q']);
 }
 
+function waal_apply_event_filter_sql(&$where, &$args, $event, $alias = 'l') {
+    $event = sanitize_key((string) $event);
+    if ($event === '') {
+        return;
+    }
+
+    if ($event === 'auth') {
+        $where .= " AND ({$alias}.object_type = %s OR {$alias}.action IN (%s,%s,%s,%s,%s,%s,%s))";
+        $args = array_merge($args, ['auth', 'login', 'logout', 'login_failed', 'bruteforce', 'password_reset_failed', 'permission_denied', 'blocked_request']);
+        return;
+    }
+
+    $where .= " AND {$alias}.object_type = %s";
+    $args[] = $event;
+}
+
 function waal_get_purge_query_context(array $filters) {
     global $wpdb;
 
@@ -624,8 +684,7 @@ function waal_get_purge_query_context(array $filters) {
         $args[] = (int) $filters['user'];
     }
     if (!empty($filters['event'])) {
-        $where .= ' AND l.object_type = %s';
-        $args[] = sanitize_key((string) $filters['event']);
+        waal_apply_event_filter_sql($where, $args, $filters['event'], 'l');
     }
     if (!empty($filters['action'])) {
         $verb = sanitize_key((string) $filters['action']);
@@ -733,9 +792,9 @@ function waal_count_filtered_logs() {
     return (int) $wpdb->get_var($wpdb->prepare($sql, $ctx['args']));
 }
 
-function waal_get_log_query_context() {
+function waal_get_log_query_context($override_filters = null) {
     global $wpdb;
-    $filters = waal_get_request_filters();
+    $filters = is_array($override_filters) ? $override_filters : waal_get_request_filters();
     $from = $filters['from'];
     $to = $filters['to'];
     $user = $filters['user'];
@@ -772,8 +831,7 @@ function waal_get_log_query_context() {
         $args[] = $user;
     }
     if ($event) {
-        $where .= " AND l.object_type = %s";
-        $args[] = $event;
+        waal_apply_event_filter_sql($where, $args, $event, 'l');
     }
     if ($act) {
         $raw_actions = function_exists('waal_get_raw_actions_for_verb') ? waal_get_raw_actions_for_verb($act) : [$act];
@@ -839,10 +897,19 @@ function waal_get_available_events() {
 
     $t = $wpdb->prefix . 'activity_logs';
     // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-    $sql = "SELECT DISTINCT object_type FROM {$t} WHERE object_type NOT IN ('revision', 'customize_changeset') ORDER BY object_type ASC";
+    $sql = "SELECT DISTINCT action, object_type FROM {$t} WHERE object_type NOT IN ('revision', 'customize_changeset') OR action IN ('login','logout','login_failed','bruteforce','password_reset_failed','permission_denied','blocked_request') ORDER BY object_type ASC, action ASC";
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-    $events = $wpdb->get_col($sql);
-    $result = array_values(array_filter(array_map('sanitize_key', (array) $events)));
+    $rows = $wpdb->get_results($sql);
+    $result = [];
+    foreach ((array) $rows as $row) {
+        $event = function_exists('waal_get_event_bucket')
+            ? waal_get_event_bucket((string) ($row->action ?? ''), (string) ($row->object_type ?? ''))
+            : sanitize_key((string) ($row->object_type ?? ''));
+        if ($event !== '' && !in_array($event, $result, true)) {
+            $result[] = $event;
+        }
+    }
+    sort($result);
     set_transient($cache_key, $result, 120);
     return $result;
 }
@@ -895,6 +962,10 @@ function waal_get_log_user_options() {
     global $wpdb;
 
     $options = [];
+    $filters = waal_get_request_filters();
+    $filters['user'] = 0;
+    $ctx = waal_get_log_query_context($filters);
+    $log_table = $wpdb->prefix . 'activity_logs';
     $collect_user = static function ($user) use (&$options) {
         $user_id = (int) ($user->ID ?? 0);
         if ($user_id <= 0) {
@@ -904,43 +975,22 @@ function waal_get_log_user_options() {
         $options[$user_id] = $label;
     };
 
-    // Primary source: users registered on current site/blog.
-    $users = get_users([
-        'fields' => ['ID', 'display_name', 'user_login'],
-        'orderby' => 'display_name',
-        'order' => 'ASC',
-        'blog_id' => get_current_blog_id(),
-    ]);
-
-    foreach ((array) $users as $user) {
-        $collect_user($user);
-    }
-
-    // Fallback for environments where blog membership query returns too few users.
-    if (count($options) <= 1) {
-        $all_users = get_users([
-            'fields' => ['ID', 'display_name', 'user_login'],
-            'orderby' => 'display_name',
-            'order' => 'ASC',
-        ]);
-        foreach ((array) $all_users as $user) {
-            $collect_user($user);
-        }
-    }
-
-    // Fallback: include user IDs found in logs (useful for imported/migrated logs).
-    $log_table = $wpdb->prefix . 'activity_logs';
-    // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-    $sql = "SELECT DISTINCT user_id FROM {$log_table} WHERE user_id > 0 ORDER BY user_id ASC";
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
-    $log_user_ids = $wpdb->get_col($sql);
+    $sql = "SELECT DISTINCT l.user_id FROM {$log_table} l {$ctx['join']} {$ctx['where']} AND l.user_id > %d ORDER BY l.user_id ASC";
+    $query_args = $ctx['args'];
+    $query_args[] = 0;
+    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
+    $log_user_ids = $wpdb->get_col($wpdb->prepare($sql, $query_args));
     foreach ((array) $log_user_ids as $raw_user_id) {
         $user_id = (int) $raw_user_id;
         if ($user_id <= 0 || isset($options[$user_id])) {
             continue;
         }
         $user = get_userdata($user_id);
-        $options[$user_id] = waal_get_human_name_for_user($user_id, $user);
+        if ($user) {
+            $collect_user($user);
+            continue;
+        }
+        $options[$user_id] = waal_get_human_name_for_user($user_id, null);
     }
 
     if (!empty($options)) {
@@ -1116,13 +1166,7 @@ function waal_render_insights_page() {
     $upgrade_url = function_exists('waal_get_upgrade_url') ? waal_get_upgrade_url() : '#';
     ?>
     <div class="wrap waal-admin-wrap">
-        <div class="waal-page-header">
-            <div class="waal-page-header-row">
-                <h1><?php echo esc_html(waal_t('Compliance Reports')); ?></h1>
-                <?php waal_render_language_switcher('wp-activity-log-insights'); ?>
-            </div>
-            <p><?php echo esc_html(waal_t('Review period-based audit metrics from your activity log in the free edition.')); ?></p>
-        </div>
+        <?php waal_render_admin_header('wp-activity-log-insights', waal_t('Compliance Reports'), waal_t('Review period-based audit metrics from your activity log in the free edition.'), 'wp-activity-log-insights'); ?>
 
         <div class="waal-card">
             <h3><?php echo esc_html(waal_t('Compliance Reports')); ?></h3>
@@ -1154,7 +1198,7 @@ function waal_render_insights_page() {
                     </div>
                     <div class="waal-field waal-field--action">
                         <label>&nbsp;</label>
-                        <button class="button button-primary waal-field-submit" type="submit"><?php echo esc_html(waal_t('Refresh Report')); ?></button>
+                        <button class="button waal-field-submit" type="submit"><?php echo esc_html(waal_t('Refresh Report')); ?></button>
                     </div>
                 </div>
             </form>
@@ -1207,7 +1251,7 @@ function waal_render_insights_page() {
             <div class="waal-compliance-panel">
                 <h4><?php echo esc_html(waal_t('Top Activities')); ?></h4>
                 <?php if (empty($report['top_actions'])): ?>
-                    <p class="description" style="margin-bottom:0;"><?php echo esc_html(waal_t('No log activity found in the selected period.')); ?></p>
+                    <p class="description waal-message-compact"><?php echo esc_html(waal_t('No log activity found in the selected period.')); ?></p>
                 <?php else: ?>
                     <ul class="waal-compliance-top-list">
                         <?php foreach ($report['top_actions'] as $item): ?>
@@ -1298,6 +1342,36 @@ function waal_render_upgrade_page() {
             ],
         ],
         [
+            'icon' => '🧭',
+            'title' => waal_t('Saved Filter Presets'),
+            'desc' => waal_t('Save investigation filters and reuse them quickly from the Activity Log screen.'),
+            'bullets' => [
+                waal_t('Reusable preset filters'),
+                waal_t('Faster review workflow'),
+                waal_t('Simpler recurring investigations'),
+            ],
+        ],
+        [
+            'icon' => '📝',
+            'title' => waal_t('Incident Notes & Status Tracking'),
+            'desc' => waal_t('Mark suspicious events, add internal notes, and keep investigation context attached to each log.'),
+            'bullets' => [
+                waal_t('Incident note per log entry'),
+                waal_t('Open and resolved status tracking'),
+                waal_t('Updated by and updated at audit trail'),
+            ],
+        ],
+        [
+            'icon' => '🪝',
+            'title' => waal_t('Alert Policies & Webhook Delivery'),
+            'desc' => waal_t('Route alert types more precisely and send structured JSON payloads to external systems.'),
+            'bullets' => [
+                waal_t('Per-alert channel policy'),
+                waal_t('Webhook URL and shared secret'),
+                waal_t('Signed delivery for integrations'),
+            ],
+        ],
+        [
             'icon' => '🧩',
             'title' => waal_t('Detail JSON View'),
             'desc' => waal_t('Open structured log detail and copy JSON for deeper technical analysis.'),
@@ -1310,13 +1384,7 @@ function waal_render_upgrade_page() {
     ];
     ?>
     <div class="wrap waal-admin-wrap">
-        <div class="waal-page-header">
-            <div class="waal-page-header-row">
-                <h1><?php echo esc_html(waal_t('Upgrade to Pro')); ?></h1>
-                <?php waal_render_language_switcher('wp-activity-log-upgrade'); ?>
-            </div>
-            <p><?php echo esc_html(waal_t('Unlock advanced audit workflow built for compliance, investigation, and long-term retention.')); ?></p>
-        </div>
+        <?php waal_render_admin_header('wp-activity-log-upgrade', waal_t('Upgrade to Pro'), waal_t('Unlock advanced audit workflow built for compliance, investigation, and long-term retention.'), 'wp-activity-log-upgrade'); ?>
 
         <section class="waal-card waal-upgrade-hero">
             <h2><?php echo esc_html(waal_t('Unlock the Full Power of InkaTrace Pro')); ?></h2>
@@ -1349,7 +1417,7 @@ function waal_render_upgrade_page() {
                     <span class="waal-premium-cta__icon" aria-hidden="true">★</span>
                     <div>
                         <strong><?php echo esc_html(waal_t('Ready to Upgrade?')); ?></strong>
-                        <p><?php echo esc_html(waal_t('Upgrade once to unlock advanced compliance, forensic timeline, and archive restore workflows.')); ?></p>
+                        <p><?php echo esc_html(waal_t('Upgrade once to unlock advanced compliance, forensic timeline, archive restore, presets, and incident workflows.')); ?></p>
                     </div>
                 </div>
                 <a class="button waal-premium-cta__button" href="<?php echo esc_url($upgrade_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html(waal_t('Upgrade to Pro')); ?></a>
@@ -1430,13 +1498,13 @@ function waal_render_documentation_page() {
             'title' => $is_id ? '4. Pengaturan > Gaya' : '4. Settings > Style',
             'items' => $is_id ? [
                 'Tab Style menggabungkan pengaturan visual dan opsi antarmuka agar halaman operasional tetap ringkas.',
-                'Gunakan Theme Color untuk mengganti warna utama plugin; gradient tombol dan CTA akan menyesuaikan otomatis.',
+                'Gunakan Theme Color untuk mengganti warna utama plugin; tombol, tab aktif, dan aksen antarmuka akan menyesuaikan otomatis.',
                 'Kolom HEX dapat diisi dengan copy-paste kode warna agar penyesuaian brand lebih presisi.',
                 'Interface Options dipakai untuk menampilkan atau menyembunyikan Saved Filter Presets di dashboard sesuai kebutuhan tim.',
                 'Export Branding tetap khusus Pro dan ditampilkan di Free sebagai CTA agar batas fitur tetap jelas.',
             ] : [
                 'The Style tab groups visual controls and interface options so operational settings stay focused.',
-                'Use Theme Color to change the plugin accent; button and CTA gradients adapt automatically.',
+                'Use Theme Color to change the plugin accent; buttons, active tabs, and interface accents adapt automatically.',
                 'The HEX field supports copy-paste color codes for more precise brand matching.',
                 'Interface Options lets you show or hide Saved Filter Presets in the dashboard depending on team preference.',
                 'Export Branding remains Pro-only and is shown in Free as a clear upgrade CTA.',
@@ -1535,13 +1603,7 @@ function waal_render_documentation_page() {
     ];
     ?>
     <div class="wrap waal-admin-wrap">
-        <div class="waal-page-header">
-            <div class="waal-page-header-row">
-                <h1><?php echo esc_html(waal_t('Documentation')); ?></h1>
-                <?php waal_render_language_switcher('wp-activity-log-docs'); ?>
-            </div>
-            <p><?php echo esc_html($page_desc); ?></p>
-        </div>
+        <?php waal_render_admin_header('wp-activity-log-docs', waal_t('Documentation'), $page_desc, 'wp-activity-log-docs'); ?>
 
         <div class="waal-doc-grid">
             <?php foreach ($sections as $section): ?>
@@ -1581,22 +1643,8 @@ function waal_render_admin_page() {
     $purge_scope_is_filtered = waal_has_active_filters($filters);
     ?>
     <div class="wrap waal-admin-wrap">
-        <div class="waal-page-header">
-            <div class="waal-page-header-row">
-                <h1><?php echo esc_html(waal_t('Activity Log')); ?></h1>
-                <?php waal_render_language_switcher('wp-activity-log'); ?>
-            </div>
-        </div>
+        <?php waal_render_admin_header('wp-activity-log', waal_t('Activity Log'), waal_t('Monitor user activity and system changes in one view.'), 'wp-activity-log'); ?>
         <div class="waal-page-header-notices">
-            <?php if (function_exists('waal_user_can_manage_logs') && waal_user_can_manage_logs()): ?>
-                <?php $docs_url = admin_url('admin.php?page=wp-activity-log-docs'); ?>
-                <div class="notice notice-info is-dismissible">
-                    <p>
-                        <?php echo esc_html(waal_t('Need setup guidance? Open Documentation for a complete feature guide.')); ?>
-                        <a class="button button-secondary" style="margin-left:8px;" href="<?php echo esc_url($docs_url); ?>"><?php echo esc_html(waal_t('Open Documentation')); ?></a>
-                    </p>
-                </div>
-            <?php endif; ?>
             <?php
             $purge_status = sanitize_key((string) filter_input(INPUT_GET, 'waal_purge_status', FILTER_UNSAFE_RAW));
             if ($purge_status === 'success') {
@@ -1619,10 +1667,6 @@ function waal_render_admin_page() {
             }
             ?>
         </div>
-        <div class="waal-page-header">
-            <p><?php echo esc_html(waal_t('Monitor user activity and system changes in one view.')); ?></p>
-        </div>
-
         <div class="waal-card">
             <form method="get" id="waal-log-filter-form">
                 <input type="hidden" name="page" value="wp-activity-log" />
@@ -1709,7 +1753,7 @@ function waal_render_admin_page() {
                         <button type="button" class="button button-secondary" id="waal-open-preset-modal"><?php echo esc_html(waal_t('Add Filter Preset')); ?></button>
                     <?php endif; ?>
                     <?php if (function_exists('waal_user_can_manage_audit_integrity') && waal_user_can_manage_audit_integrity()): ?>
-                        <button type="button" class="button button-secondary button-link-delete" id="waal-open-purge-modal"><?php echo esc_html(waal_t('Purge Manual')); ?></button>
+                        <button type="button" class="button button-secondary button-link-delete waal-button-danger" id="waal-open-purge-modal"><?php echo esc_html(waal_t('Purge Manual')); ?></button>
                     <?php endif; ?>
                 </div>
             </form>
@@ -1744,7 +1788,7 @@ function waal_render_admin_page() {
                             <?php wp_nonce_field('waal_manual_purge_logs', 'waal_purge_nonce'); ?>
                             <div class="waal-modal-actions">
                                 <button type="button" class="button" data-waal-close-modal><?php echo esc_html(waal_t('Cancel')); ?></button>
-                                <button type="submit" class="button button-primary button-link-delete"><?php echo esc_html(waal_t('Yes, Purge Now')); ?></button>
+                                <button type="submit" class="button button-primary button-link-delete waal-button-danger"><?php echo esc_html(waal_t('Yes, Purge Now')); ?></button>
                             </div>
                         </form>
                     </div>
@@ -1832,6 +1876,12 @@ function waal_render_admin_page() {
                             <p class="waal-log-detail-ip-title"><?php echo esc_html(waal_t('IP Information')); ?></p>
                             <p class="waal-log-detail-ip-value" data-waal-detail-ip>-</p>
                             <div class="waal-log-detail-ip-meta" data-waal-detail-ip-meta><?php echo esc_html(waal_t('Loading IP info...')); ?></div>
+                        </div>
+                        <div class="waal-log-detail-resource-block">
+                            <p class="waal-log-detail-resource-title"><?php echo esc_html(waal_t('Related Resource')); ?></p>
+                            <div class="waal-log-detail-resource-links" data-waal-detail-resources>
+                                <span class="description"><?php echo esc_html(waal_t('No related resource available for this log.')); ?></span>
+                            </div>
                         </div>
                         <?php if (function_exists('waal_user_can_manage_audit_integrity') && waal_user_can_manage_audit_integrity()): ?>
                             <div class="waal-log-detail-notes">

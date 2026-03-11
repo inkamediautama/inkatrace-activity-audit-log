@@ -166,6 +166,67 @@ class WAAL_Table extends WP_List_Table {
         return '<span class="waal-name-avatar-fallback" aria-hidden="true">' . esc_html($initials) . '</span>';
     }
 
+    private function push_resource_link(&$links, $label, $url) {
+        $label = trim((string) $label);
+        $url = trim((string) $url);
+        if ($label === '' || $url === '') {
+            return;
+        }
+
+        $links[] = [
+            'label' => waal_t($label),
+            'url' => esc_url_raw($url),
+        ];
+    }
+
+    private function build_resource_links($item) {
+        $links = [];
+        $object_id = (int) ($item->object_id ?? 0);
+        $object_type = sanitize_key((string) ($item->object_type ?? ''));
+
+        if ($object_id > 0) {
+            $post = get_post($object_id);
+            if ($post instanceof WP_Post) {
+                $edit_url = get_edit_post_link($object_id, '');
+                if (is_string($edit_url) && $edit_url !== '') {
+                    $this->push_resource_link($links, 'Edit Resource', $edit_url);
+                }
+
+                if ($post->post_type === 'attachment') {
+                    $file_url = wp_get_attachment_url($object_id);
+                    if (is_string($file_url) && $file_url !== '') {
+                        $this->push_resource_link($links, 'Open File', $file_url);
+                    }
+                } else {
+                    $view_url = get_permalink($object_id);
+                    if (is_string($view_url) && $view_url !== '') {
+                        $this->push_resource_link($links, 'View Resource', $view_url);
+                    }
+                }
+
+                return $links;
+            }
+
+            if ($object_type === 'user') {
+                $this->push_resource_link($links, 'Edit User', admin_url('user-edit.php?user_id=' . $object_id));
+                return $links;
+            }
+
+            if ($object_type === 'comment') {
+                $this->push_resource_link($links, 'Edit Comment', admin_url('comment.php?action=editcomment&c=' . $object_id));
+                return $links;
+            }
+        }
+
+        if ($object_type === 'plugin') {
+            $this->push_resource_link($links, 'Open Plugins', admin_url('plugins.php'));
+        } elseif ($object_type === 'theme') {
+            $this->push_resource_link($links, 'Open Themes', admin_url('themes.php'));
+        }
+
+        return $links;
+    }
+
     function prepare_items() {
         $nonce = isset($_GET['waal_nonce']) ? sanitize_text_field(wp_unslash($_GET['waal_nonce'])) : '';
         if ($nonce !== '' && !wp_verify_nonce($nonce, 'waal_filter_logs')) {
@@ -265,7 +326,11 @@ class WAAL_Table extends WP_List_Table {
                 $display_ip = function_exists('waal_mask_ip_address')
                     ? waal_mask_ip_address($raw_ip)
                     : $raw_ip;
-                return '<span class="waal-ip-badge" data-ip="' . esc_attr($raw_ip) . '">' . esc_html($display_ip) . '</span>';
+                $detail_ip = function_exists('waal_ip_detail_value') ? waal_ip_detail_value($raw_ip) : $raw_ip;
+                if ($detail_ip !== '') {
+                    return '<span class="waal-ip-badge" data-ip="' . esc_attr($detail_ip) . '">' . esc_html($display_ip) . '</span>';
+                }
+                return esc_html($display_ip);
             case 'ua': return esc_html($i->user_agent?:'-');
             case 'time':
                 return $this->render_time_cell($i->created_at ?? '');
@@ -293,6 +358,8 @@ class WAAL_Table extends WP_List_Table {
                 $display_ip = $raw_ip !== ''
                     ? (function_exists('waal_mask_ip_address') ? waal_mask_ip_address($raw_ip) : $raw_ip)
                     : '-';
+                $detail_ip = function_exists('waal_ip_detail_value') ? waal_ip_detail_value($raw_ip) : $raw_ip;
+                $resource_links = $this->build_resource_links($i);
                 $payload = [
                     'id' => (int) ($i->id ?? 0),
                     'no' => (int) ($i->_row_no ?? 0),
@@ -306,7 +373,11 @@ class WAAL_Table extends WP_List_Table {
                     'content' => function_exists('waal_get_content_label')
                         ? (string) waal_get_content_label($i->action, $i->object_title ?? '', $i->object_type ?? '')
                         : (string) ($i->object_title ?? '-'),
+                    'object_type' => sanitize_key((string) ($i->object_type ?? '')),
+                    'object_id' => (int) ($i->object_id ?? 0),
+                    'resource_links' => $resource_links,
                     'ip' => $display_ip,
+                    'detail_ip' => $detail_ip,
                     'raw_ip' => $raw_ip,
                     'ua' => (string) ($i->user_agent ?? '-'),
                     'time' => trim((string) ($i->created_at ?? '-')),

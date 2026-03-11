@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: InkaTrace for Activity & Audit Log
- * Plugin URI:  https://products.inkamedia.id/inkatrace-for-activity-audit-log
+ * Plugin URI:  https://inkamedia.id/inkatrace/
  * Description: Provides real-time visibility into WordPress activity by recording critical actions across users, content, and system changes — all in one centralized audit log.
  * Version: 1.2.4.4
  * Requires at least: 6.0
@@ -24,7 +24,7 @@ define('WAAL_VERSION', '1.2.4.4');
 define('WAAL_EDITION', 'free');
 define('WAAL_DB_SCHEMA_VERSION', '2026-03-07-1');
 if (!defined('WAAL_UPGRADE_URL')) {
-    define('WAAL_UPGRADE_URL', 'https://products.inkamedia.id/inkatrace-for-activity-audit-log');
+    define('WAAL_UPGRADE_URL', 'https://inkamedia.id/inkatrace/');
 }
 
 require_once WAAL_PATH . 'includes/db.php';

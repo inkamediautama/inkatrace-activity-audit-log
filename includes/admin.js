@@ -8,22 +8,65 @@
         }
         return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : '';
     };
+    var adjustHexColor = function (hex, percent) {
+        var normalized = normalizeHexColor(hex);
+        if (!normalized) {
+            normalized = '#2C6652';
+        }
+        var value = normalized.slice(1);
+        var rgb = [
+            parseInt(value.slice(0, 2), 16),
+            parseInt(value.slice(2, 4), 16),
+            parseInt(value.slice(4, 6), 16)
+        ];
+        var ratio = Math.max(-100, Math.min(100, Number(percent) || 0)) / 100;
+        rgb = rgb.map(function (channel) {
+            if (ratio >= 0) {
+                return Math.max(0, Math.min(255, Math.round(channel + ((255 - channel) * ratio))));
+            }
+            return Math.max(0, Math.min(255, Math.round(channel * (1 + ratio))));
+        });
+        return '#' + rgb.map(function (channel) {
+            return channel.toString(16).padStart(2, '0');
+        }).join('').toUpperCase();
+    };
+    var applyThemeColor = function (hex) {
+        var normalized = normalizeHexColor(hex);
+        if (!normalized) {
+            return;
+        }
+        var accentDark = adjustHexColor(normalized, -18);
+        var accentLight = adjustHexColor(normalized, 12);
+        document.querySelectorAll('.waal-admin-wrap').forEach(function (node) {
+            node.style.setProperty('--waal-accent-1', accentDark);
+            node.style.setProperty('--waal-accent-2', normalized);
+            node.style.setProperty('--waal-accent-3', accentLight);
+        });
+    };
+
+    if (window.waalAdminAjax && waalAdminAjax.themeColor) {
+        applyThemeColor(waalAdminAjax.themeColor);
+    }
 
     if (themeColorPicker && themeColorHex) {
         themeColorPicker.addEventListener('input', function () {
-            themeColorHex.value = String(themeColorPicker.value || '').toUpperCase();
+            var nextValue = String(themeColorPicker.value || '').toUpperCase();
+            themeColorHex.value = nextValue;
+            applyThemeColor(nextValue);
         });
 
         themeColorHex.addEventListener('input', function () {
             var normalized = normalizeHexColor(themeColorHex.value);
             if (normalized) {
                 themeColorPicker.value = normalized;
+                applyThemeColor(normalized);
             }
         });
 
         themeColorHex.addEventListener('blur', function () {
             var normalized = normalizeHexColor(themeColorHex.value);
             themeColorHex.value = normalized || String(themeColorPicker.value || '').toUpperCase();
+            applyThemeColor(themeColorHex.value);
         });
     }
 
@@ -234,6 +277,12 @@
         return ip && ip.indexOf(':') !== -1 ? 'IPv6' : 'IPv4';
     };
 
+    var isValidLookupIp = function (ip) {
+        var value = String(ip || '').trim();
+        if (!value) return false;
+        return /^[0-9.]+$/.test(value) || /^[0-9a-fA-F:]+$/.test(value);
+    };
+
     var detectIpScope = function (ip) {
         var value = String(ip || '').trim().toLowerCase();
         if (!value) return 'invalid';
@@ -272,6 +321,25 @@
         return html;
     };
 
+    var renderResourceLinks = function (links) {
+        var i18n = window.waalAdminI18n || {};
+        if (!Array.isArray(links) || !links.length) {
+            return '<span class="description">' + escapeHtml(i18n.detailResourcesEmpty || 'No related resource available for this log.') + '</span>';
+        }
+
+        var html = '';
+        links.forEach(function (link) {
+            var label = String((link && link.label) || '').trim();
+            var url = String((link && link.url) || '').trim();
+            if (!label || !url) return;
+            html += '<a class="button button-secondary waal-log-detail-resource-link" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer">'
+                + escapeHtml(label)
+                + '</a>';
+        });
+
+        return html || ('<span class="description">' + escapeHtml(i18n.detailResourcesEmpty || 'No related resource available for this log.') + '</span>');
+    };
+
     var placeTooltipNear = function (target) {
         if (!ipTooltip || !target) return;
         var rect = target.getBoundingClientRect();
@@ -284,6 +352,15 @@
     };
 
     var loadIpInfo = function (ip, done) {
+        if (!isValidLookupIp(ip)) {
+            done({
+                ip: ip,
+                type: detectIpType(ip),
+                scope: 'public',
+                geo: {}
+            });
+            return;
+        }
         if (ipCache[ip]) {
             done(ipCache[ip]);
             return;
@@ -374,6 +451,7 @@
             time: detailModal.querySelector('[data-waal-detail-time]'),
             ip: detailModal.querySelector('[data-waal-detail-ip]'),
             ipMeta: detailModal.querySelector('[data-waal-detail-ip-meta]'),
+            resources: detailModal.querySelector('[data-waal-detail-resources]'),
             jsonToggle: detailModal.querySelector('[data-waal-toggle-json]'),
             jsonPre: detailModal.querySelector('[data-waal-detail-json]'),
             incidentStatus: detailModal.querySelector('[data-waal-incident-status]'),
@@ -416,6 +494,9 @@
             bindText('time', String(data.time || '-'));
             bindText('ip', String(data.ip || '-'));
             var i18n = window.waalAdminI18n || {};
+            if (detailFields.resources) {
+                detailFields.resources.innerHTML = renderResourceLinks(data.resource_links || []);
+            }
             if (detailFields.incidentNote) {
                 detailFields.incidentNote.value = String(data.incident_note || '');
             }
@@ -435,7 +516,7 @@
                 detailFields.jsonToggle.textContent = detailFields.jsonToggle.getAttribute('data-open-label') || 'View JSON';
             }
 
-            var rawIp = String(data.raw_ip || '').trim();
+            var rawIp = String(data.detail_ip || data.raw_ip || '').trim();
             if (detailFields.ipMeta) {
                 detailFields.ipMeta.textContent = i18n.ipInfoLoading || 'Loading IP info...';
             }

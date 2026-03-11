@@ -4,27 +4,25 @@
   --waal-accent-2:#2c6652;
   --waal-accent-3:#3b7a62;
   --waal-surface:#ffffff;
-  --waal-surface-soft:#f8fafc;
-  --waal-border:#d8e0ea;
+  --waal-surface-soft:#f6f7f9;
+  --waal-surface-muted:#f0f2f4;
+  --waal-surface-raised:#ffffff;
+  --waal-border:#d7dde4;
+  --waal-border-strong:#c5ced8;
   --waal-text:#1f2937;
   --waal-text-muted:#5f6b76;
-  --waal-shadow-sm:0 6px 18px rgba(15,23,42,.06);
-  --waal-shadow-md:0 12px 32px rgba(15,23,42,.09);
-}
-.waal-page-header{margin:16px 0 14px}
-.waal-brand{display:flex;align-items:center;gap:12px}
-.waal-brand-logo{width:42px;height:42px;display:block;flex:0 0 42px}
-.waal-page-header h1{margin:0 0 6px;font-size:24px;font-weight:700;line-height:1.3;color:#0f172a;letter-spacing:-.2px}
-.waal-page-header p{margin:0;color:var(--waal-text-muted);font-size:13px}
-.waal-page-header-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.waal-page-header-row > h1{order:1}
-.waal-page-header-row > .waal-lang-switcher{order:2;margin-left:auto}
-.waal-page-header-row .notice{
-  order:3;
-  flex:1 1 100%;
-  width:100%;
-  margin:8px 0 0;
-  float:none;
+  --waal-button-muted-text:#334155;
+  --waal-button-muted-border:#cfd6de;
+  --waal-button-muted-bg-1:#ffffff;
+  --waal-button-muted-bg-2:#f8fafb;
+  --waal-button-muted-hover-1:#ffffff;
+  --waal-button-muted-hover-2:#f1f4f7;
+  --waal-danger:#c73b36;
+  --waal-danger-hover:#ad2f2b;
+  --waal-danger-soft:#fff1f0;
+  --waal-danger-border:#e8bebc;
+  --waal-radius-sm:4px;
+  --waal-radius-md:6px;
 }
 .waal-page-header-notices{margin:0 0 8px}
 .waal-page-header-notices .notice{
@@ -35,22 +33,82 @@
   margin:0 0 8px;
 }
 .waal-page-header-notices .notice:last-child{margin-bottom:0}
-.waal-admin-wrap .nav-tab-wrapper{border-bottom:0!important;box-shadow:none!important;display:flex;gap:8px;flex-wrap:wrap;padding-bottom:0}
+.waal-shell-header{
+  margin:0 0 18px;
+  background:#fff;
+  border:1px solid var(--waal-border);
+  border-radius:0;
+  overflow:hidden;
+}
+.waal-shell-header-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:18px 24px;
+  border-bottom:1px solid var(--waal-border);
+}
+.waal-shell-brand{display:flex;align-items:center;min-width:0}
+.waal-shell-brand-logo{width:auto;height:42px;max-width:220px;display:block;flex:0 0 auto}
+.waal-shell-nav{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:28px;
+  padding:0 24px;
+  border-bottom:0;
+  background:#fff;
+}
+.waal-shell-nav-link{
+  display:inline-flex;
+  align-items:center;
+  min-height:52px;
+  padding:0 0 2px;
+  color:var(--waal-button-muted-text);
+  text-decoration:none;
+  font-weight:600;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  border-bottom:3px solid transparent;
+  transition:background .18s ease,color .18s ease,border-color .18s ease;
+}
+.waal-shell-nav-link:hover{background:transparent;border-color:var(--waal-accent-1);color:var(--waal-accent-1)}
+.waal-shell-nav-link.is-active{background:transparent;border-color:var(--waal-accent-2);color:var(--waal-accent-2)}
+.waal-settings-tabs{position:relative;margin:18px 0 22px}
+.waal-settings-tabs::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:1px;
+  background:var(--waal-border);
+}
+.waal-admin-wrap .nav-tab-wrapper{border-bottom:0!important;box-shadow:none!important;display:flex;gap:0;flex-wrap:wrap;padding-bottom:0;position:relative;z-index:1}
 .waal-admin-wrap h2.nav-tab-wrapper{border-bottom:0!important;box-shadow:none!important;padding-bottom:0}
 .waal-admin-wrap .nav-tab{
+  position:relative;
   border:1px solid var(--waal-border);
-  border-radius:9px 9px 0 0;
-  background:linear-gradient(180deg,#fff,#f4f7fb);
-  color:#334155;
-  padding:8px 14px;
-  font-weight:600;
-  margin:0;
+  border-bottom-color:var(--waal-border);
+  border-radius:0;
+  background:#f7f8fa;
+  color:var(--waal-button-muted-text);
+  padding:14px 18px 13px;
+  font-weight:700;
+  line-height:1.2;
+  margin:0 0 -1px;
+  transition:background .18s ease,color .18s ease,border-color .18s ease;
 }
-.waal-admin-wrap .nav-tab:hover{background:linear-gradient(180deg,#fff,#ecf3fb);color:#0f172a}
+.waal-admin-wrap .nav-tab + .nav-tab{margin-left:-1px}
+.waal-admin-wrap .nav-tab:hover{background:var(--waal-accent-1);color:#fff;border-color:var(--waal-accent-1)}
 .waal-admin-wrap .nav-tab-active{
-  border-color:#2c6652;
-  background:linear-gradient(135deg,#1f4f3f,#2c6652);
+  background:var(--waal-accent-2);
   color:#fff;
+  border-color:var(--waal-accent-2);
+  border-bottom-color:var(--waal-accent-2);
+  box-shadow:none;
+  transform:none;
 }
 .waal-admin-wrap .wp-header-end{display:none}
 .toplevel_page_wp-activity-log .wp-submenu a[href$="page=wp-activity-log-upgrade-direct"]{
@@ -61,18 +119,53 @@
 .toplevel_page_wp-activity-log .wp-submenu a[href$="page=wp-activity-log-upgrade-direct"]:focus{
   color:#3b7a62 !important;
 }
-.waal-lang-switcher{display:flex;align-items:center;gap:8px}
-.waal-lang-switcher label{font-size:12px;font-weight:600;color:#2c3338}
-.waal-lang-switcher select{min-height:30px;min-width:156px;padding-right:36px}
+.waal-lang-switcher{display:inline-flex;align-items:center;gap:0;flex:0 0 auto}
+.waal-lang-switcher-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:auto;
+  padding:0;
+  color:var(--waal-button-muted-text);
+  text-decoration:none;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  transition:color .18s ease;
+}
+.waal-lang-switcher-link + .waal-lang-switcher-link{margin-left:8px;padding-left:10px;position:relative}
+.waal-lang-switcher-link + .waal-lang-switcher-link::before{
+  content:"/";
+  position:absolute;
+  left:0;
+  top:50%;
+  transform:translateY(-50%);
+  color:#9ca3af;
+  font-weight:600;
+}
+.waal-lang-switcher-link:hover{color:var(--waal-accent-1)}
+.waal-lang-switcher-link.is-active{color:var(--waal-accent-2)}
 .waal-card{
-  background:linear-gradient(180deg,var(--waal-surface),var(--waal-surface-soft));
+  background:#ffffff;
   border:1px solid var(--waal-border);
-  border-radius:10px;
-  padding:16px;
-  margin:0 0 14px;
-  box-shadow:var(--waal-shadow-sm);
+  border-radius:var(--waal-radius-md);
+  padding:18px 22px 18px;
+  margin:0 0 18px;
+  box-shadow:none;
+  overflow:hidden;
 }
 .waal-card h2,.waal-card h3{margin-top:0;color:var(--waal-text);letter-spacing:-.15px}
+.waal-card:not(.waal-doc-card) > h2:first-child,
+.waal-card:not(.waal-doc-card) > h3:first-child{
+  margin:-18px -22px 16px;
+  padding:14px 22px;
+  background:#f7f8fa;
+  border-bottom:1px solid var(--waal-border);
+  font-size:18px;
+  line-height:1.35;
+}
+.waal-card:not(.waal-doc-card) > h3:first-child{font-size:17px}
 .waal-admin-wrap input[type="text"],
 .waal-admin-wrap input[type="search"],
 .waal-admin-wrap input[type="email"],
@@ -81,37 +174,106 @@
 .waal-admin-wrap select,
 .waal-admin-wrap textarea{
   border-color:#cdd8e5;
-  border-radius:7px;
+  border-radius:var(--waal-radius-sm);
   min-height:42px;
   padding:8px 12px;
+}
+.waal-admin-wrap select{
+  padding-right:36px;
 }
 .waal-admin-wrap input:focus,
 .waal-admin-wrap select:focus,
 .waal-admin-wrap textarea:focus{
   border-color:#2c6652;
-  box-shadow:0 0 0 1px #2c6652;
+  box-shadow:none;
 }
 .waal-admin-wrap .button-primary{
-  background:linear-gradient(135deg,var(--waal-accent-1),var(--waal-accent-2));
+  background:var(--waal-accent-2);
   border-color:#2c6652;
   color:#fff;
-  box-shadow:0 7px 18px rgba(44,102,82,.24);
+  box-shadow:none;
 }
 .waal-admin-wrap .button-primary:hover,
 .waal-admin-wrap .button-primary:focus{
-  background:linear-gradient(135deg,var(--waal-accent-2),var(--waal-accent-3));
-  border-color:#2c6652;
+  background:var(--waal-accent-1);
+  border-color:var(--waal-accent-1);
   color:#fff;
 }
-.waal-admin-wrap .button-secondary{
-  border-color:#b9cadc;
-  color:#12415e;
-  background:linear-gradient(180deg,#fff,#eff5fc);
-}
+.waal-admin-wrap .button{border-radius:var(--waal-radius-sm);min-height:40px;padding:0 18px;line-height:38px;transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease}
+.waal-admin-wrap .button.button-small{min-height:32px;height:32px;padding:0 12px;line-height:30px}
+.waal-admin-wrap .button:not(.button-primary):not(.waal-button-danger){border-color:var(--waal-button-muted-border);color:var(--waal-button-muted-text);background:#ffffff;box-shadow:none}
+.waal-admin-wrap .button:hover,.waal-admin-wrap .button:focus{transform:none}
+.waal-admin-wrap .button:not(.button-primary):not(.waal-button-danger):hover,
+.waal-admin-wrap .button:not(.button-primary):not(.waal-button-danger):focus{border-color:var(--waal-accent-2);color:#fff;background:var(--waal-accent-2);box-shadow:none}
+.waal-admin-wrap .waal-button-danger{background:var(--waal-danger-soft);border-color:var(--waal-danger-border);color:var(--waal-danger)}
+.waal-admin-wrap .waal-button-danger:hover,.waal-admin-wrap .waal-button-danger:focus{background:var(--waal-danger);border-color:var(--waal-danger);color:#fff}
 .waal-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px 18px;align-items:end}
 .waal-field label{display:block;margin:0 0 8px;font-size:12px;font-weight:600;line-height:1.35;color:#2c3338}
 .waal-field input,.waal-field select{width:100%}
 .waal-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:24px;padding-top:2px}
+.waal-shell-header-meta{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#6b7280;
+  font-size:13px;
+  line-height:1.4;
+}
+.waal-shell-version{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  color:#6b7280;
+  white-space:nowrap;
+}
+.waal-shell-version::before{
+  content:"|";
+  color:#9ca3af;
+}
+.waal-message-compact{margin:0}
+.waal-help-field{margin:0 0 10px}
+.waal-help-field label{display:block;margin:0 0 6px;font-size:12px;font-weight:600;color:#2c3338}
+.waal-help-field input,
+.waal-help-field select,
+.waal-help-field textarea{width:100%;max-width:100%;box-sizing:border-box}
+.waal-section-desc{margin:0 0 12px;color:#50575e}
+.waal-admin-wrap p.description.waal-setting-note,
+.waal-admin-wrap .waal-setting-note{
+  margin:12px 0 8px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:#6b7280;
+  font-size:12px;
+  line-height:1.5;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+}
+.waal-admin-wrap p.description.waal-setting-note--compact,
+.waal-admin-wrap .waal-setting-note--compact{display:inline-flex;align-items:center;min-height:auto;padding:0;margin:12px 0 8px}
+.waal-setting-note--flush{margin-top:0}
+.waal-setting-note--stacked{margin-top:12px}
+.waal-admin-wrap p.description.waal-helper-copy,
+.waal-admin-wrap .waal-helper-copy{margin:12px 0 8px;color:#6b7280;font-size:12px;line-height:1.5}
+.waal-helper-copy--flush{margin-top:0}
+.waal-admin-wrap p.description.waal-helper-copy--compact,
+.waal-admin-wrap .waal-helper-copy--compact{margin:12px 0 8px}
+.waal-setting-note-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:2px 8px;
+  border-radius:4px;
+  background:#f3c96a;
+  color:#6b4b11;
+  font-size:11px;
+  font-weight:700;
+  line-height:1.45;
+  flex:0 0 auto;
+}
+.waal-setting-note-text{display:block;color:#6b7280;padding-top:2px}
 .waal-premium-cta{
   margin-top:10px;
   display:flex;
@@ -121,8 +283,7 @@
   padding:14px 16px;
   border-radius:10px;
   border:1px solid #2c6652;
-  background:linear-gradient(135deg,#1f4f3f 0%,#2c6652 55%,#3b7a62 100%);
-  box-shadow:0 10px 24px rgba(44,102,82,.28);
+  background:#2c6652;
   color:#f8fafc;
 }
 .waal-premium-cta__meta{display:flex;align-items:center;gap:12px;min-width:0}
@@ -141,21 +302,20 @@
 .waal-premium-cta__meta strong{display:block;font-size:18px;line-height:1.2;color:#fff}
 .waal-premium-cta__meta p{margin:2px 0 0;font-size:13px;line-height:1.4;color:rgba(255,255,255,.92)}
 .waal-premium-cta__button.button{
-  background:rgba(255,255,255,.16);
-  border-color:rgba(255,255,255,.46);
+  background:rgba(255,255,255,.12);
+  border-color:rgba(255,255,255,.34);
   color:#fff;
   height:38px;
   line-height:36px;
   padding:0 16px;
   border-radius:7px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.15);
   flex:0 0 auto;
 }
 .waal-premium-cta__button.button:hover,
 .waal-premium-cta__button.button:focus{
-  background:rgba(255,255,255,.24);
-  border-color:rgba(255,255,255,.64);
-  color:#fff;
+  background:#ffffff;
+  border-color:#ffffff;
+  color:var(--waal-accent-2);
 }
 .waal-upgrade-grid{
   display:grid;
@@ -167,11 +327,16 @@
 .waal-upgrade-list{margin:0;padding-left:18px;display:grid;gap:8px}
 .waal-upgrade-list li{color:#334155;line-height:1.5}
 .waal-upgrade-hero{
-  background:linear-gradient(135deg,#1f4f3f 0%,#2c6652 55%,#3b7a62 100%);
+  background:#2c6652;
   border-color:#2c6652;
-  box-shadow:0 14px 34px rgba(44,102,82,.3);
   padding:24px 26px;
   margin-bottom:18px;
+}
+.waal-upgrade-hero > h2:first-child{
+  margin:0 0 10px;
+  padding:0;
+  background:transparent;
+  border-bottom:0;
 }
 .waal-upgrade-hero h2{margin:0 0 10px;color:#fff;font-size:30px;line-height:1.2}
 .waal-upgrade-hero p{margin:4px 0 0;color:rgba(255,255,255,.92);max-width:900px;line-height:1.7}
@@ -183,7 +348,6 @@
 }
 .waal-upgrade-feature-card{
   border-color:#d2deeb;
-  box-shadow:0 8px 20px rgba(15,23,42,.06);
   padding:22px 20px 18px;
 }
 .waal-upgrade-feature-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
@@ -229,15 +393,14 @@
 }
 .waal-upgrade-bottom-cta{margin-top:20px;padding:14px 16px}
 .waal-upgrade-premium-btn.button{
-  background:linear-gradient(135deg,#1f4f3f 0%,#2c6652 55%,#3b7a62 100%);
-  border-color:#2c6652;
+  background:var(--waal-accent-2);
+  border-color:var(--waal-accent-2);
   color:#fff;
-  box-shadow:0 8px 20px rgba(44,102,82,.24);
 }
 .waal-upgrade-premium-btn.button:hover,
 .waal-upgrade-premium-btn.button:focus{
-  background:linear-gradient(135deg,#2c6652 0%,#3b7a62 100%);
-  border-color:#3b7a62;
+  background:var(--waal-accent-1);
+  border-color:var(--waal-accent-1);
   color:#fff;
 }
 .waal-export-meta{margin-left:auto;align-self:center;font-size:12px;color:#374151;white-space:nowrap}
@@ -289,9 +452,9 @@
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  background:#e8f3ee;
-  border:1px solid #c8ddd2;
-  color:#2c6652;
+  background:#f3f4f6;
+  border:1px solid #d7dce3;
+  color:#4b5563;
   font-size:16px;
 }
 .waal-doc-card ul{margin:0;padding-left:18px}
@@ -450,7 +613,8 @@
 .waal-name-stack{display:flex;flex-direction:column;gap:2px}
 .waal-name-main{font-weight:600;color:#1d2327;line-height:1.35}
 .waal-name-sub{font-size:11px;color:#6b7280;line-height:1.3}
-.waal-ip-badge{cursor:help;text-decoration:underline dotted;text-underline-offset:2px}
+.waal-ip-badge{cursor:default;text-decoration:none}
+.waal-ip-badge[data-ip]{cursor:help;text-decoration:underline dotted;text-underline-offset:2px}
 .waal-ip-tooltip{
   position:absolute;
   z-index:100001;
@@ -478,10 +642,14 @@
 }
 .waal-log-detail-grid dt{margin:0;font-size:12px;color:#6b7280;font-weight:600}
 .waal-log-detail-grid dd{margin:0;font-size:13px;color:#1f2937;word-break:break-word}
-.waal-log-detail-ip-block{border-top:1px solid #e5e7eb;padding-top:10px}
-.waal-log-detail-ip-title{margin:0 0 4px;font-size:12px;color:#6b7280;font-weight:600}
+.waal-log-detail-ip-block{border-top:1px solid #e5e7eb;padding-top:12px;margin-top:12px}
+.waal-log-detail-ip-title{margin:0 0 8px;font-size:12px;color:#6b7280;font-weight:600}
 .waal-log-detail-ip-value{margin:0 0 8px;font-size:13px;color:#0f172a;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
 .waal-log-detail-ip-meta{font-size:12px;color:#374151;line-height:1.45}
+.waal-log-detail-resource-block{border-top:1px solid #e5e7eb;padding-top:12px;margin-top:12px}
+.waal-log-detail-resource-title{margin:0 0 8px;font-size:12px;color:#6b7280;font-weight:600}
+.waal-log-detail-resource-links{display:flex;gap:8px;flex-wrap:wrap}
+.waal-log-detail-resource-links .description{display:block;margin:0;color:#6b7280}
 .waal-log-detail-notes{border-top:1px solid #e5e7eb;padding-top:12px;margin-top:12px}
 .waal-log-detail-notes-title{margin:0 0 8px;font-size:12px;color:#6b7280;font-weight:600}
 .waal-log-detail-note-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}

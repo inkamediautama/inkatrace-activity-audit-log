@@ -2,7 +2,7 @@
 defined('ABSPATH') || exit;
 
 function waal_get_upgrade_url() {
-    $default = defined('WAAL_UPGRADE_URL') ? WAAL_UPGRADE_URL : 'https://products.inkamedia.id/inkatrace-for-activity-audit-log';
+    $default = defined('WAAL_UPGRADE_URL') ? WAAL_UPGRADE_URL : 'https://inkamedia.id/inkatrace/';
     return apply_filters('waal_upgrade_url', $default);
 }
 
@@ -163,10 +163,12 @@ function waal_render_settings_page() {
             $purge_enabled = filter_input(INPUT_POST, 'waal_purge_enabled', FILTER_UNSAFE_RAW);
             $retention_post = filter_input(INPUT_POST, 'waal_retention_days', FILTER_UNSAFE_RAW);
             $ip_geo_lookup_enabled = filter_input(INPUT_POST, 'waal_ip_geo_lookup_enabled', FILTER_UNSAFE_RAW);
+            $ip_display_mode_post = filter_input(INPUT_POST, 'waal_ip_display_mode', FILTER_UNSAFE_RAW);
             $excluded_events_post = filter_input(INPUT_POST, 'waal_excluded_events', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY);
             update_option('waal_allow_editor_view', $allow_editor_view !== null ? 1 : 0);
             update_option('waal_purge_enabled', $purge_enabled !== null ? 1 : 0);
             update_option('waal_ip_geo_lookup_enabled', $ip_geo_lookup_enabled !== null ? 1 : 0);
+            update_option('waal_ip_display_mode', in_array(sanitize_key((string) $ip_display_mode_post), ['full', 'masked', 'role_based'], true) ? sanitize_key((string) $ip_display_mode_post) : 'full');
 
             $retention_raw = $retention_post !== null ? $retention_post : 90;
             update_option('waal_retention_days', max(7, (int) $retention_raw));
@@ -221,6 +223,7 @@ function waal_render_settings_page() {
     $notify_email = sanitize_email((string) get_option('waal_notify_email', (string) get_option('admin_email', 'admin@example.com')));
     $allow_editor_view = (int) get_option('waal_allow_editor_view', 1);
     $ip_geo_lookup_enabled = (int) get_option('waal_ip_geo_lookup_enabled', 0);
+    $ip_display_mode = sanitize_key((string) get_option('waal_ip_display_mode', 'full'));
     $filter_presets_enabled = (int) get_option('waal_filter_presets_enabled', 1);
     $theme_color = waal_get_theme_color();
     $tabs = [
@@ -230,30 +233,24 @@ function waal_render_settings_page() {
     ];
     ?>
     <div class="wrap waal-admin-wrap">
-        <div class="waal-page-header">
-            <div class="waal-page-header-row">
-                <h1><?php echo esc_html(waal_t('Settings Activity Log')); ?></h1>
-                <?php if (function_exists('waal_render_language_switcher')) waal_render_language_switcher('wp-activity-log-settings'); ?>
-            </div>
-            <p><?php echo esc_html(waal_t('Configure access, notifications, and log retention for the free edition.')); ?></p>
-            <p class="description" style="margin:6px 0 0;">Version: <?php echo esc_html(defined('WAAL_VERSION') ? WAAL_VERSION : ''); ?></p>
-        </div>
-
+        <?php if (function_exists('waal_render_admin_header')) waal_render_admin_header('wp-activity-log-settings', waal_t('Settings Activity Log'), waal_t('Configure access, notifications, and log retention for the free edition.'), 'wp-activity-log-settings'); ?>
         <?php echo $notice; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 
-        <h2 class="nav-tab-wrapper">
-            <?php foreach ($tabs as $tab_key => $tab_label): ?>
-                <?php
-                $tab_url = add_query_arg([
-                    'page' => 'wp-activity-log-settings',
-                    'tab' => $tab_key,
-                ], admin_url('admin.php'));
-                ?>
-                <a href="<?php echo esc_url($tab_url); ?>" class="nav-tab <?php echo $active_tab === $tab_key ? 'nav-tab-active' : ''; ?>">
-                    <?php echo esc_html($tab_label); ?>
-                </a>
-            <?php endforeach; ?>
-        </h2>
+        <div class="waal-settings-tabs">
+            <h2 class="nav-tab-wrapper">
+                <?php foreach ($tabs as $tab_key => $tab_label): ?>
+                    <?php
+                    $tab_url = add_query_arg([
+                        'page' => 'wp-activity-log-settings',
+                        'tab' => $tab_key,
+                    ], admin_url('admin.php'));
+                    ?>
+                    <a href="<?php echo esc_url($tab_url); ?>" class="nav-tab <?php echo $active_tab === $tab_key ? 'nav-tab-active' : ''; ?>">
+                        <?php echo esc_html($tab_label); ?>
+                    </a>
+                <?php endforeach; ?>
+            </h2>
+        </div>
 
         <div class="waal-settings-layout">
             <div class="waal-settings-main">
@@ -294,15 +291,21 @@ function waal_render_settings_page() {
                                     <input type="number" name="waal_retention_days" min="7" value="<?php echo esc_attr((string) $retention_days); ?>" style="width:90px;">
                                     <?php echo esc_html(waal_t('days')); ?>
                                 </p>
-                                <p class="description" style="margin-top:8px;"><?php echo esc_html(waal_t('Administrator-only setting for audit integrity.')); ?></p>
+                                <p class="description waal-setting-note">
+                                    <span class="waal-setting-note-badge"><?php echo esc_html(waal_t('Note')); ?></span>
+                                    <span class="waal-setting-note-text"><?php echo esc_html(waal_t('Administrator-only setting for audit integrity.')); ?></span>
+                                </p>
                             <?php endif; ?>
                         </div>
 
                         <div class="waal-card">
-                            <h3 style="margin:0 0 8px;"><?php echo esc_html(waal_t('Exclude Events')); ?></h3>
-                            <p class="description" style="margin:0 0 8px;"><?php echo esc_html(waal_t('Choose event categories to exclude from future activity logs.')); ?></p>
+                            <h3><?php echo esc_html(waal_t('Exclude Events')); ?></h3>
+                            <p class="description waal-helper-copy waal-helper-copy--flush"><?php echo esc_html(waal_t('Choose event categories to exclude from future activity logs.')); ?></p>
                             <?php if (!waal_user_can_manage_audit_integrity()): ?>
-                                <p class="description"><?php echo esc_html(waal_t('Event exclusion is administrator-only for audit integrity.')); ?></p>
+                                <p class="description waal-setting-note">
+                                    <span class="waal-setting-note-badge"><?php echo esc_html(waal_t('Note')); ?></span>
+                                    <span class="waal-setting-note-text"><?php echo esc_html(waal_t('Event exclusion is administrator-only for audit integrity.')); ?></span>
+                                </p>
                                 <div class="waal-role-list">
                                     <?php foreach ($excludable_events as $event_key => $event_label): ?>
                                         <label>
@@ -325,9 +328,15 @@ function waal_render_settings_page() {
                                         </label>
                                     <?php endforeach; ?>
                                 </div>
-                                <p class="description" style="margin-top:8px;"><?php echo esc_html(waal_t('Administrator-only setting for audit integrity.')); ?></p>
+                                <p class="description waal-setting-note">
+                                    <span class="waal-setting-note-badge"><?php echo esc_html(waal_t('Note')); ?></span>
+                                    <span class="waal-setting-note-text"><?php echo esc_html(waal_t('Administrator-only setting for audit integrity.')); ?></span>
+                                </p>
                             <?php endif; ?>
-                            <p class="description" style="margin-top:8px;"><?php echo esc_html(waal_t('Excluded events are ignored for new logs only. Existing logs are not removed.')); ?></p>
+                            <p class="description waal-setting-note">
+                                <span class="waal-setting-note-badge"><?php echo esc_html(waal_t('Note')); ?></span>
+                                <span class="waal-setting-note-text"><?php echo esc_html(waal_t('Excluded events are ignored for new logs only. Existing logs are not removed.')); ?></span>
+                            </p>
                         </div>
 
                         <div class="waal-card">
@@ -345,7 +354,34 @@ function waal_render_settings_page() {
                                     <?php echo esc_html(waal_t('Allow external IP geolocation lookup')); ?>
                                 </label>
                             <?php endif; ?>
-                            <p class="description" style="margin-top:8px;"><?php echo esc_html(waal_t('Disabled by default. When turned off, IP details stay local and no public IP is sent to geolocation providers.')); ?></p>
+                            <p class="description waal-setting-note">
+                                <span class="waal-setting-note-badge"><?php echo esc_html(waal_t('Note')); ?></span>
+                                <span class="waal-setting-note-text"><?php echo esc_html(waal_t('Disabled by default. When turned off, IP details stay local and no public IP is sent to geolocation providers.')); ?></span>
+                            </p>
+                        </div>
+
+                        <div class="waal-card">
+                            <h2><?php echo esc_html(waal_t('IP Display & Exposure')); ?></h2>
+                            <p class="waal-section-desc"><?php echo esc_html(waal_t('Choose how IP addresses appear in the admin UI. Exports and audit JSON remain full for investigation needs.')); ?></p>
+                            <?php if (!waal_user_can_manage_audit_integrity()): ?>
+                                <p class="description waal-setting-note">
+                                    <span class="waal-setting-note-badge"><?php echo esc_html(waal_t('Note')); ?></span>
+                                    <span class="waal-setting-note-text"><?php echo esc_html(waal_t('IP display mode can only be changed by an administrator.')); ?></span>
+                                </p>
+                            <?php endif; ?>
+                            <table class="form-table" role="presentation">
+                                <tr>
+                                    <th scope="row"><label for="waal-ip-display-mode"><?php echo esc_html(waal_t('IP Display Mode')); ?></label></th>
+                                    <td>
+                                        <select id="waal-ip-display-mode" name="waal_ip_display_mode" <?php disabled(!waal_user_can_manage_audit_integrity()); ?>>
+                                            <option value="full" <?php selected($ip_display_mode, 'full'); ?>><?php echo esc_html(waal_t('Full')); ?></option>
+                                            <option value="masked" <?php selected($ip_display_mode, 'masked'); ?>><?php echo esc_html(waal_t('Masked')); ?></option>
+                                            <option value="role_based" <?php selected($ip_display_mode, 'role_based'); ?>><?php echo esc_html(waal_t('Role-based')); ?></option>
+                                        </select>
+                                        <p class="description waal-helper-copy"><?php echo esc_html(waal_t('Full shows the exact IP. Masked shows partial IP only. Role-based shows full IP for administrators and masked IP for other roles.')); ?></p>
+                                    </td>
+                                </tr>
+                            </table>
                         </div>
 
                     <?php elseif ($active_tab === 'style'): ?>
@@ -356,21 +392,26 @@ function waal_render_settings_page() {
                                 <input type="checkbox" name="waal_filter_presets_enabled" <?php checked($filter_presets_enabled, 1); ?> <?php disabled(!waal_user_can_manage_audit_integrity()); ?>>
                                 <?php echo esc_html(waal_t('Show Filter Presets in Activity Log')); ?>
                             </label>
-                            <p class="description"><?php echo esc_html(waal_t('Turn this off to keep the Activity Log filter area simpler for users who do not need saved presets.')); ?></p>
+                            <p class="description waal-setting-note">
+                                <span class="waal-setting-note-badge"><?php echo esc_html(waal_t('Note')); ?></span>
+                                <span class="waal-setting-note-text"><?php echo esc_html(waal_t('Turn this off to keep the Activity Log filter area simpler for users who do not need saved presets.')); ?></span>
+                            </p>
                         </div>
 
                         <div class="waal-card">
                             <h2><?php echo esc_html(waal_t('Theme Color')); ?></h2>
                             <p class="waal-section-desc"><?php echo esc_html(waal_t('Choose one primary color and the plugin will generate matching button and CTA gradients automatically.')); ?></p>
-                            <div class="waal-help-field" style="margin:0;">
+                            <div class="waal-help-field">
                                 <label for="waal-theme-color"><?php echo esc_html(waal_t('Primary Theme Color')); ?></label>
                                 <div class="waal-theme-color-row">
                                     <input type="color" id="waal-theme-color" value="<?php echo esc_attr($theme_color); ?>" <?php disabled(!waal_user_can_manage_audit_integrity()); ?>>
                                     <input type="text" id="waal-theme-color-hex" name="waal_theme_color" value="<?php echo esc_attr($theme_color); ?>" maxlength="7" spellcheck="false" placeholder="#2C6652" <?php disabled(!waal_user_can_manage_audit_integrity()); ?>>
                                 </div>
-                                <p class="description"><?php echo esc_html(waal_t('HEX Color Code')); ?></p>
                             </div>
-                            <p class="description"><?php echo esc_html(waal_t('Buttons, active tabs, CTA accents, and focus highlights will adapt automatically from this color.')); ?></p>
+                            <p class="description waal-setting-note">
+                                <span class="waal-setting-note-badge"><?php echo esc_html(waal_t('Note')); ?></span>
+                                <span class="waal-setting-note-text"><?php echo esc_html(waal_t('Buttons, active tabs, CTA accents, and focus highlights will adapt automatically from this color.')); ?></span>
+                            </p>
                         </div>
 
                     <?php elseif ($active_tab === 'notifications'): ?>
@@ -378,7 +419,10 @@ function waal_render_settings_page() {
                             <h2><?php echo esc_html(waal_t('Email Notifications')); ?></h2>
                             <p class="waal-section-desc"><?php echo esc_html(waal_t('Configure alert emails for important security and system events.')); ?></p>
                             <?php if (!waal_user_can_manage_audit_integrity()): ?>
-                                <p class="description"><?php echo esc_html(waal_t('Notifications settings can only be changed by an administrator.')); ?></p>
+                                <p class="description waal-setting-note">
+                                    <span class="waal-setting-note-badge"><?php echo esc_html(waal_t('Note')); ?></span>
+                                    <span class="waal-setting-note-text"><?php echo esc_html(waal_t('Notifications settings can only be changed by an administrator.')); ?></span>
+                                </p>
                             <?php endif; ?>
                             <table class="form-table" role="presentation">
                                 <tr>
@@ -394,7 +438,7 @@ function waal_render_settings_page() {
                                     <th scope="row"><label for="waal-notify-email">Notification Email</label></th>
                                     <td>
                                         <input type="email" name="waal_notify_email" id="waal-notify-email" class="regular-text" value="<?php echo esc_attr($notify_email); ?>" <?php disabled(!waal_user_can_manage_audit_integrity()); ?>>
-                                        <p class="description">Threat and critical change alerts are sent to this address.</p>
+                                        <p class="description waal-helper-copy"><?php echo esc_html(waal_t('Threat and critical change alerts are sent to this address.')); ?></p>
                                     </td>
                                 </tr>
                                 <tr>
